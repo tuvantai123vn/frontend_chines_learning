@@ -1,12 +1,5 @@
 import axios from "axios";
 
-// Cấu hình chung cho axios
-// const axiosInstance = axios.create({
-//   baseURL: "https://backend-chines-learning.onrender.com/api", // Đặt baseURL chung
-//   headers: {
-//     "Content-Type": "application/json",
-//   },
-// });
 const axiosInstance = axios.create({
     baseURL: "http://localhost:5001/api", // Đặt baseURL chung
     headers: {
