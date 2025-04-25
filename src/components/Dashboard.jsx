@@ -1,31 +1,37 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { getAllWords } from "../api"; // Import các hàm API
 
 const Dashboard = () => {
-  const [vocabList, setVocabList] = useState([]);
+  const [wordlist, setWordlist] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  // Fetch vocab list with pagination
+  // Fetch wordlist with pagination
   useEffect(() => {
-    const fetchVocab = async () => {
+    const fetchData = async () => {
+      // Kiểm tra và lấy token từ localStorage
+      const token = localStorage.getItem("token"); 
+      if (!token) {
+        console.log("No token found, please log in.");
+        return; // Nếu không có token, dừng thực hiện API
+      }
+
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
-          `http://localhost:5001/api/vocab?page=${currentPage}&limit=${pageSize}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        setVocabList(response.data.vocabs);
+        // Gọi API với token đã lấy
+        const response = await getAllWords(currentPage, pageSize, token); 
+        setWordlist(response.data.vocabs);
         setTotalCount(response.data.totalCount);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching data:", err);
+        if (err.response && err.response.status === 401) {
+          console.log("Unauthorized! Please login again.");
+        }
       }
     };
-    fetchVocab();
+
+    fetchData();
   }, [currentPage, pageSize]);
 
   // Handle search query change
@@ -33,9 +39,9 @@ const Dashboard = () => {
     setSearchQuery(e.target.value);
   };
 
-  // Filtered vocab list based on search query
-  const filteredVocabList = vocabList.filter((vocab) =>
-    vocab.hanzi.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filtered wordlist based on search query
+  const filteredWordlist = wordlist.filter((word) =>
+    word.hanzi.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Pagination Logic
@@ -55,17 +61,17 @@ const Dashboard = () => {
         />
       </div>
 
-      <p className="text-center mb-8 text-lg font-semibold">Total Vocab: {totalCount}</p>
+      <p className="text-center mb-8 text-lg font-semibold">Total Wordlist: {totalCount}</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredVocabList.map((vocab) => (
+        {filteredWordlist.map((word) => (
           <div
-            key={vocab._id}
+            key={word._id}
             className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
           >
-            <h3 className="text-2xl font-semibold text-green-600">{vocab.hanzi}</h3>
-            <p className="text-sm text-gray-700">{vocab.pinyin}</p>
-            <p className="text-sm text-gray-700">{vocab.meaning}</p>
+            <h3 className="text-2xl font-semibold text-green-600">{word.hanzi}</h3>
+            <p className="text-sm text-gray-700">{word.pinyin}</p>
+            <p className="text-sm text-gray-700">{word.meaning}</p>
           </div>
         ))}
       </div>

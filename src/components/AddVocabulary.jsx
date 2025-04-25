@@ -1,97 +1,67 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// Debounce function
-const debounce = (func, delay) => {
-  let timeout;
-  return (...args) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), delay);
-  };
-};
-
-// Throttle function
-const throttle = (func, limit) => {
-  let lastFunc;
-  let lastRan;
-  return (...args) => {
-    const context = this;
-    if (!lastRan) {
-      func.apply(context, args);
-      lastRan = Date.now();
-    } else {
-      clearTimeout(lastFunc);
-      lastFunc = setTimeout(() => {
-        if (Date.now() - lastRan >= limit) {
-          func.apply(context, args);
-          lastRan = Date.now();
-        }
-      }, limit - (Date.now() - lastRan));
-    }
-  };
-};
+import { addWord, fetchTranslation, fetchPinyin } from '../api'; // Import API functions
 
 const AddVocabulary = () => {
   const navigate = useNavigate();
   const [vocabularies, setVocabularies] = useState([{ hanzi: '', pinyin: '', meaning: '' }]);
   const [message, setMessage] = useState('');
+  const [currentHanzi, setCurrentHanzi] = useState(''); // Trạng thái riêng biệt cho hanzi
+  const [debouncedHanzi, setDebouncedHanzi] = useState(''); // Trạng thái để debounce
 
-  // Fetch translation (meaning)
-  const fetchTranslation = async (hanziValue, index) => {
-    try {
-      const response = await fetch(
-        `https://translate.googleapis.com/translate_a/single?client=gtx&sl=zh&tl=vi&dt=t&q=${encodeURIComponent(hanziValue)}`
-      );
-      const data = await response.json();
-      const meaning = data[0]?.map(item => item[0]).join(' ') || '';
-
-      const updatedVocabularies = [...vocabularies];
-      updatedVocabularies[index].meaning = meaning;
-      setVocabularies(updatedVocabularies);
-    } catch (error) {
-      console.error('Lỗi khi dịch nghĩa:', error);
-    }
-  };
-
-  // Fetch Pinyin
-  const fetchPinyin = async (hanziValue, index) => {
-    try {
-      const response = await fetch('http://localhost:5001/api/vocab/convert', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ hanzi: hanziValue }),
-      });
-
-      const data = await response.json();
-      const pinyin = data.pinyin || '';
-
-      const updatedVocabularies = [...vocabularies];
-      updatedVocabularies[index].pinyin = pinyin;
-      setVocabularies(updatedVocabularies);
-    } catch (error) {
-      console.error('Lỗi khi lấy pinyin:', error);
-    }
-  };
-
-  // Handle adding new vocabulary
-  const handleAddVocabulary = () => {
-    setVocabularies([...vocabularies, { hanzi: '', pinyin: '', meaning: '' }]);
-  };
-
-  // Handle change for any input
-  const handleChange = (index, e) => {
+  // Hàm xử lý thay đổi khi nhập từ Hán tự
+  const handleChange = async (index, e) => {
     const { name, value } = e.target;
+
+    // Cập nhật trạng thái của hanzi
+    if (name === 'hanzi') {
+      setCurrentHanzi(value);
+    }
+
+    // Cập nhật lại danh sách vocabularies
     const updatedVocabularies = [...vocabularies];
     updatedVocabularies[index][name] = value;
     setVocabularies(updatedVocabularies);
+  };
 
-    // If the input is for Hanzi, we need to fetch Pinyin and meaning
-    if (name === 'hanzi' && value.trim()) {
-      fetchTranslation(value, index);
-      fetchPinyin(value, index);
-    }
+  // Hàm debounce: cập nhật giá trị hanzi đã thay đổi sau một khoảng thời gian
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedHanzi(currentHanzi); // Cập nhật giá trị sau khi có độ trễ
+    }, 1000); // Thời gian debounce: 1000ms = 1s
+
+    // Cleanup function để hủy timeout nếu người dùng nhập quá nhanh
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [currentHanzi]);
+
+  // Hàm gọi API khi giá trị hanzi thay đổi (sau debounce)
+  useEffect(() => {
+    const fetchData = async () => {
+      if (debouncedHanzi.trim()) {
+        try {
+          // Lấy Pinyin và Nghĩa từ API
+          const meaning = await fetchTranslation(debouncedHanzi);
+          const pinyin = await fetchPinyin(debouncedHanzi);
+
+          // Cập nhật lại vocabularies
+          const updatedVocabularies = [...vocabularies];
+          updatedVocabularies[0].meaning = meaning || '';
+          updatedVocabularies[0].pinyin = pinyin || '';
+          setVocabularies(updatedVocabularies);
+        } catch (error) {
+          console.error('Lỗi khi gọi API:', error);
+        }
+      }
+    };
+
+    fetchData();
+  }, [debouncedHanzi, vocabularies]);
+
+  // Hàm thêm từ vựng mới vào
+  const handleAddVocabulary = () => {
+    setVocabularies([...vocabularies, { hanzi: '', pinyin: '', meaning: '' }]);
   };
 
   const handleRemoveVocabulary = (index) => {
@@ -111,16 +81,10 @@ const AddVocabulary = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/vocab', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ vocabularies: filteredVocabularies })
-      });
+      // Gọi API để thêm từ vựng
+      const response = await addWord({ vocabularies: filteredVocabularies });
 
-      if (response.ok) {
+      if (response.status === 200) {
         setMessage('Lưu từ vựng thành công!');
         setTimeout(() => navigate('/dashboard'), 1500);
       } else {

@@ -1,20 +1,22 @@
 import { Disclosure, DisclosureButton, DisclosurePanel, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', current: false },
+  { name: 'Home', href: '/', current: false },
   { name: 'Quiz', href: '/quiz', current: false },
-  { name: 'Addvocabulaary', href: '/addvocabulary', current: false },
-  { name: 'HistoryPage', href: '/historypage', current: false },
+  { name: 'Add Word', href: '/addvocabulary', current: false },
+  { name: 'History Quiz', href: '/historypage', current: false },
 ];
+
 function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");  // Kiểm tra token từ localStorage
+  const location = useLocation(); // Lấy đường dẫn hiện tại
+  const token = localStorage.getItem("token"); // Kiểm tra token từ localStorage
 
   const handleLogout = () => {
     localStorage.removeItem("token"); // Xóa token khi đăng xuất
@@ -22,7 +24,7 @@ export default function Navbar() {
   };
 
   const handleLogin = () => {
-    navigate('/dashboard'); // Điều hướng tới dashboard khi đăng nhập thành công
+    navigate('/login'); // Điều hướng tới login khi đăng nhập thành công
   };
 
   return (
@@ -77,12 +79,14 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <button
-                onClick={handleLogin}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              >
-                Login
-              </button>
+              location.pathname !== '/login' && ( // Ẩn nút Login nếu đang ở trang /login
+                <button
+                  onClick={handleLogin}
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                >
+                  Login
+                </button>
+              )
             )}
             {/* Bell Icon and Profile Dropdown */}
             {token && (

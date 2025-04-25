@@ -1,14 +1,21 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { loginUser } from "../api"; // Import hàm login từ api.js
 
 export default function Example() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // Hàm xử lý đăng nhập
   const handleLogin = async (e) => {
     const token = localStorage.getItem("token");
-    if (token) return <Navigate to="/dashboard" replace />;
+    if (token) {
+      navigate("/");
+      return;
+    }
+
     e.preventDefault();
 
     if (!email || !password) {
@@ -16,25 +23,21 @@ export default function Example() {
       return;
     }
 
-    try {
-      const response = await fetch("http://localhost:5001/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+    setLoading(true);
 
-      const data = await response.json();
+    try {
+      const data = await loginUser(email, password); // Gọi API từ api.js
 
       if (data.token) {
-        localStorage.setItem("token", data.token); // Lưu token vào localStorage
-        window.location.href = "/dashboard"; // Chuyển hướng sau khi đăng nhập thành công
+        localStorage.setItem("token", data.token);
+        navigate("/");
       } else {
         setErrorMessage(data.msg || "Đăng nhập thất bại");
       }
     } catch (error) {
-      setErrorMessage("Đã có lỗi xảy ra. Vui lòng thử lại sau!");
+      setErrorMessage(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,14 +102,18 @@ export default function Example() {
             type="submit"
             className="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
-            Đăng nhập
+            {loading ? (
+              <span className="animate-spin">Đang đăng nhập...</span>
+            ) : (
+              "Đăng nhập"
+            )}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-500">
           Bạn chưa có tài khoản?{" "}
           <a
-            href="#"
+            href="/register"
             className="text-indigo-600 hover:text-indigo-700 font-semibold"
           >
             Đăng ký ngay

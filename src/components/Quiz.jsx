@@ -1,6 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { getRandomQuiz, submitQuiz } from "../api"; // Import các hàm API từ api.js
 
 const Quiz = () => {
   const [quizData, setQuizData] = useState([]);
@@ -13,13 +13,7 @@ const Quiz = () => {
 
   const fetchQuiz = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `http://localhost:5001/api/quiz/random?count=20`, // Mặc định là 20 câu hỏi
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await getRandomQuiz();
       setQuizData(response.data);
       setAnswers([]);
       setScore(null);
@@ -46,19 +40,7 @@ const Quiz = () => {
 
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(
-        "http://localhost:5001/api/quiz/calculate-score",
-        {
-          answers: quizData.map((vocab, index) => ({
-            questionId: vocab._id,
-            answer: answers[index] || "",
-          })),
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await submitQuiz(answers); // Gửi câu trả lời để tính điểm
       setScore(res.data.correctAnswers);
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);

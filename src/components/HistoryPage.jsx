@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getHistory } from "../api"; // Đảm bảo đã import hàm getHistory từ api.js
 
 const HistoryPage = () => {
   const [history, setHistory] = useState([]);
@@ -8,19 +9,15 @@ const HistoryPage = () => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await fetch("http://localhost:5001/api/quiz/history", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`, // Giả sử token được lưu trong localStorage
-          },
-        });
-        
-        if (!response.ok) {
-          throw new Error("Lỗi khi lấy lịch sử bài kiểm tra");
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found");
+          setLoading(false);
+          return;
         }
 
-        const data = await response.json();
-        console.log("Dữ liệu lịch sử:", data); // Debug log dữ liệu nhận được
-        setHistory(data);
+        const response = await getHistory(token); // Gọi API từ api.js
+        setHistory(response.data); // Lưu kết quả vào state
         setLoading(false);
       } catch (error) {
         console.error("❌ Lỗi khi lấy lịch sử bài kiểm tra:", error);
